@@ -11,7 +11,6 @@ public class Spawner : MonoBehaviour
     [SerializeField] private ColorChanger _colorChanger;
 
     private ObjectPool<Cube> _cubePool;
-    private float _time;
 
     private void Awake()
     {
@@ -23,7 +22,6 @@ public class Spawner : MonoBehaviour
             collectionCheck: true,
             defaultCapacity: _defaultCapasity,
             maxSize: _maxPoolSize);
-        _time = 0f;
     }
 
     private void Start()
@@ -42,24 +40,12 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        _time += Time.deltaTime;
-
-        if (_time >= _delay)
-        {
-            _time = 0;
-            GetCube();
-        }
-    }
-
     private void ActionOnGet(Cube cube)
     {
+        cube.SetColorChanger(_colorChanger);
         cube.transform.position = GetStartPosition();
         cube.gameObject.SetActive(true);
         cube.SetVelocity(Vector3.zero);
-        cube.SetCollideStatus(false);
-        cube.OnCollisionPlatform += OnCubeCollidePlatform;
         cube.OnCubeLiveTimeEnded += ReleaseCube;
     }
 
@@ -76,17 +62,6 @@ public class Spawner : MonoBehaviour
     }
 
     private void ReleaseCube(Cube cube) => _cubePool.Release(cube);
-
-    private void OnCubeCollidePlatform(Cube cube)
-    {
-        if (cube.IsCollidePlatform == false)
-        {
-            _colorChanger.SetRandomColor(cube);
-            cube.SetCollideStatus(true);
-            cube.OnCollisionPlatform -= OnCubeCollidePlatform;
-            cube.StartCountDown();
-        }
-    }
 
     private Vector3 GetStartPosition()
     {

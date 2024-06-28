@@ -1,22 +1,21 @@
 using System;
-using Unity.Profiling;
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(Renderer))]
 [RequireComponent(typeof(Rigidbody))]
 public class Cube : MonoBehaviour
 {
-    public event Action<Cube> OnCollisionPlatform;
+    private const string PlatformTag = "Platform";
+
     public event Action<Cube> OnCubeLiveTimeEnded;
 
     private Renderer _renderer;
     private Rigidbody _rigidbody;
     private bool _isCollidePlatform;
-    private bool _isCountDownStarted;
-    private float _countDownTime;
-    private float _time;
-
-    public bool IsCollidePlatform => _isCollidePlatform;
+    private Coroutine _liveTimeCountdown;
+    private float _secondsRemaning;
+    private ColorChanger _colorChanger;
 
     private void Awake()
     {
@@ -27,41 +26,34 @@ public class Cube : MonoBehaviour
     private void OnEnable()
     {
         _isCollidePlatform = false;
-        _isCountDownStarted = false;
-        _countDownTime = 0;
-        _time = 0;
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        if (_isCountDownStarted)
-        {
-            _time += Time.deltaTime;
+        if(_liveTimeCountdown != null )
+            StopCoroutine(_liveTimeCountdown);
+    }
 
-            if (_time >= _countDownTime)
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag(PlatformTag))
+        {
+            if (_isCollidePlatform == false)
             {
-                OnCubeLiveTimeEnded?.Invoke(this);
-                _isCountDownStarted = false;
+                _secondsRemaning = GetLiveTime();
+                _isCollidePlatform = true;
+
+                StartCoroutine(CountDown(_secondsRemaning));
+                ChangeColor();
             }
         }
     }
 
-    public void SetCollideStatus(bool status) => _isCollidePlatform = status;
-
     public Renderer GetRenderer() => _renderer;
 
+    public void SetColorChanger(ColorChanger colorChanger) => _colorChanger = colorChanger;
+
     public void SetVelocity(Vector3 velocity) => _rigidbody.velocity = velocity;
-
-    public void CollidePlatform()
-    {
-        OnCollisionPlatform?.Invoke(this);
-    }
-
-    public void StartCountDown()
-    {
-        _isCountDownStarted = true;
-        _countDownTime = GetLiveTime();      
-    }
 
     private float GetLiveTime()
     {
@@ -69,5 +61,19 @@ public class Cube : MonoBehaviour
         float maxLiveTime = 5f;
 
         return UnityEngine.Random.Range(minLiveTime, maxLiveTime);
+    }
+
+    private IEnumerator CountDown(float seconds)
+    {
+        WaitForSeconds wait = new WaitForSeconds(seconds);
+
+        yield return wait;
+
+        OnCubeLiveTimeEnded?.Invoke(this);
+    }
+
+    private void ChangeColor()
+    {
+        _colorChanger.SetRandomColor(this);
     }
 }
